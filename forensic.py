@@ -1,3 +1,5 @@
+import logging
+import threading
 import requests
 import whois
 import sys
@@ -12,51 +14,57 @@ import socket
 import numpy as np
 from sklearn.ensemble import IsolationForest
 
+# Konfigurasi logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[
+    logging.FileHandler("forensic.log"),
+    logging.StreamHandler()
+])
+
 def get_headers(url):
     try:
         response = requests.get(url)
-        print("--- HTTP Headers ---")
+        logging.info("--- HTTP Headers ---")
         for key, value in response.headers.items():
-            print(f"{key}: {value}")
+            logging.info(f"{key}: {value}")
     except Exception as e:
-        print("Error fetching URL:", e)
+        logging.error("Error fetching URL: %s", e)
 
 def get_whois(domain):
     try:
         w = whois.whois(domain)
-        print("--- WHOIS Information ---")
-        print(w)
+        logging.info("--- WHOIS Information ---")
+        logging.info(w)
     except Exception as e:
-        print("Error fetching WHOIS:", e)
+        logging.error("Error fetching WHOIS: %s", e)
 
 def get_dns_records(domain):
     try:
         answers = dns.resolver.resolve(domain, 'A')
-        print("--- DNS Records ---")
+        logging.info("--- DNS Records ---")
         for rdata in answers:
-            print(rdata.to_text())
+            logging.info(rdata.to_text())
     except Exception as e:
-        print("Error fetching DNS records:", e)
+        logging.error("Error fetching DNS records: %s", e)
 
 def check_blacklist(url):
     blacklist_urls = [
         f"https://www.virustotal.com/gui/domain/{url}",
         f"https://www.phishtank.com/check_another.php?quick=1&isaphish=&valid=Check+URL&url={url}"
     ]
-    print("--- Blacklist Check ---")
+    logging.info("--- Blacklist Check ---")
     for b_url in blacklist_urls:
-        print("Check:", b_url)
+        logging.info("Check: %s", b_url)
 
 def extract_metadata(url):
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
-        print("--- Metadata Extraction ---")
+        logging.info("--- Metadata Extraction ---")
         for meta in soup.find_all('meta'):
             if meta.get('name') and meta.get('content'):
-                print(f"{meta.get('name')}: {meta.get('content')}")
+                logging.info("%s: %s", meta.get('name'), meta.get('content'))
     except Exception as e:
-        print("Error fetching page:", e)
+        logging.error("Error fetching page: %s", e)
 
 def log_analysis(url):
     try:
@@ -71,44 +79,44 @@ def log_analysis(url):
         
         existing_hashes = {entry["hash"] for entry in logs}
         if hashed_url in existing_hashes:
-            print("[ALERT] URL has been previously scanned!")
+            logging.warning("[ALERT] URL has been previously scanned!")
         else:
             logs.append(log_entry)
             with open(log_file_path, "a") as log_file:
                 log_file.write(json.dumps(log_entry) + "\n")
         
-        print("--- Log Analysis ---")
-        print("URL Hash:", hashed_url)
+        logging.info("--- Log Analysis ---")
+        logging.info("URL Hash: %s", hashed_url)
     except Exception as e:
-        print("Error logging data:", e)
+        logging.error("Error logging data: %s", e)
 
 def track_cryptocurrency(domain):
-    print("--- Cryptocurrency Forensic ---")
-    print(f"Tracking transactions for: {domain}")
+    logging.info("--- Cryptocurrency Forensic ---")
+    logging.info("Tracking transactions for: %s", domain)
     blockchain_url = f"https://www.blockchain.com/explorer/search?search={domain}"
-    print(f"Check transactions here: {blockchain_url}")
+    logging.info("Check transactions here: %s", blockchain_url)
 
 def scan_sensitive_info(url):
     try:
         response = requests.get(url)
         if response.status_code == 200:
             content = response.text
-            print("--- Sensitive Data Scan ---")
-            emails = set(re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}", content))
+            logging.info("--- Sensitive Data Scan ---")
+            emails = set(re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", content))
             if emails:
-                print("Found emails:", emails)
+                logging.info("Found emails: %s", emails)
             else:
-                print("No emails found.")
-            
+                logging.info("No emails found.")
+                
             api_keys = set(re.findall(r"(?i)apikey[=:\"']([a-zA-Z0-9]{20,})", content))
             if api_keys:
-                print("Potential API Keys found:", api_keys)
+                logging.info("Potential API Keys found: %s", api_keys)
             else:
-                print("No API keys found.")
+                logging.info("No API keys found.")
         else:
-            print("Error fetching page for sensitive info scan.")
+            logging.error("Error fetching page for sensitive info scan.")
     except Exception as e:
-        print("Error scanning for sensitive info:", e)
+        logging.error("Error scanning for sensitive info: %s", e)
 
 def detect_anomalies(ip_list):
     ip_data = np.array([[int(ip.split(".")[0])] for ip in ip_list])
@@ -116,9 +124,9 @@ def detect_anomalies(ip_list):
     model.fit(ip_data)
     predictions = model.predict(ip_data)
     anomalies = [ip_list[i] for i, val in enumerate(predictions) if val == -1]
-    print("--- Anomalous IP Addresses ---")
+    logging.info("--- Anomalous IP Addresses ---")
     for ip in anomalies:
-        print(ip)
+        logging.info(ip)
 
 def ip_correlation_analysis():
     log_file_path = "forensic_logs.json"
@@ -136,28 +144,33 @@ def ip_correlation_analysis():
         detect_anomalies(ip_list)
 
 def alert_monitoring():
-    print("[ALERT MONITORING] Active threat detection enabled.")
-    print("Real-time alerts will be generated for detected threats.")
+    logging.info("[ALERT MONITORING] Active threat detection enabled.")
+    logging.info("Real-time alerts will be generated for detected threats.")
 
 def scan_all_links(url):
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.text, 'html.parser')
         links = {a['href'] for a in soup.find_all('a', href=True)}
-        print("--- Scanning All Links ---")
+        logging.info("--- Scanning All Links ---")
+        threads = []
         for link in links:
             if link.startswith("http"):
-                print("Scanning:", link)
-                scan_sensitive_info(link)
+                logging.info("Scanning: %s", link)
+                thread = threading.Thread(target=scan_sensitive_info, args=(link,))
+                threads.append(thread)
+                thread.start()
+        for thread in threads:
+            thread.join()
     except Exception as e:
-        print("Error scanning all links:", e)
+        logging.error("Error scanning all links: %s", e)
 
 def update():
-    print("Updating forensic tool...")
+    logging.info("Updating forensic tool...")
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 forensic.py <URL> or python3 forensic.py -update")
+        logging.error("Usage: python3 forensic.py <URL> or python3 forensic.py -update")
         return
     
     if sys.argv[1] == "-update":
@@ -167,7 +180,7 @@ def main():
     url = sys.argv[1]
     domain = url.replace("http://", "").replace("https://", "").split("/")[0]
     
-    print(f"Starting forensic scan for: {url}")
+    logging.info("Starting forensic scan for: %s", url)
     get_headers(url)
     get_whois(domain)
     get_dns_records(domain)
