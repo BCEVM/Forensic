@@ -1,4 +1,4 @@
-# versi 1.3
+# versi 1.4
 import logging
 import threading
 import requests
@@ -15,9 +15,7 @@ import socket
 import numpy as np
 from sklearn.ensemble import IsolationForest
 from concurrent.futures import ThreadPoolExecutor
-import matplotlib.pyplot as plt
-from collections import Counter
-from datetime import datetime
+import subprocess
 
 # Konfigurasi logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[
@@ -25,7 +23,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
     logging.StreamHandler()
 ])
 
-# Fungsi untuk mengambil HTTP headers
 def get_headers(url):
     try:
         response = requests.get(url)
@@ -35,7 +32,6 @@ def get_headers(url):
     except Exception as e:
         logging.error("Error fetching URL: %s", e)
 
-# Fungsi untuk mengambil informasi WHOIS
 def get_whois(domain):
     try:
         w = whois.whois(domain)
@@ -44,7 +40,6 @@ def get_whois(domain):
     except Exception as e:
         logging.error("Error fetching WHOIS: %s", e)
 
-# Fungsi untuk mengambil DNS records
 def get_dns_records(domain):
     try:
         answers = dns.resolver.resolve(domain, 'A')
@@ -54,7 +49,6 @@ def get_dns_records(domain):
     except Exception as e:
         logging.error("Error fetching DNS records: %s", e)
 
-# Fungsi untuk memeriksa blacklist
 def check_blacklist(url):
     blacklist_urls = [
         f"https://www.virustotal.com/gui/domain/{url}",
@@ -64,7 +58,6 @@ def check_blacklist(url):
     for b_url in blacklist_urls:
         logging.info("Check: %s", b_url)
 
-# Fungsi untuk ekstraksi metadata dari halaman web
 def extract_metadata(url):
     try:
         response = requests.get(url)
@@ -76,7 +69,6 @@ def extract_metadata(url):
     except Exception as e:
         logging.error("Error fetching page: %s", e)
 
-# Fungsi untuk analisis log
 def log_analysis(url):
     try:
         hashed_url = hashlib.md5(url.encode()).hexdigest()
@@ -105,14 +97,12 @@ def log_analysis(url):
     except Exception as e:
         logging.error("Error logging data: %s", e)
 
-# Fungsi untuk melacak cryptocurrency yang terkait dengan domain
 def track_cryptocurrency(domain):
     logging.info("--- Cryptocurrency Forensic ---")
     logging.info("Tracking transactions for: %s", domain)
     blockchain_url = f"https://www.blockchain.com/explorer/search?search={domain}"
     logging.info("Check transactions here: %s", blockchain_url)
 
-# Fungsi untuk memeriksa data sensitif di halaman web
 def scan_sensitive_info(url):
     try:
         response = requests.get(url)
@@ -135,7 +125,6 @@ def scan_sensitive_info(url):
     except Exception as e:
         logging.error("Error scanning for sensitive info: %s", e)
 
-# Fungsi untuk mendeteksi IP yang mencurigakan
 def detect_anomalies(ip_list):
     ip_data = np.array([[int(ip.split(".")[i]) for i in range(4)] for ip in ip_list])
     model = IsolationForest(contamination=0.1)
@@ -146,7 +135,6 @@ def detect_anomalies(ip_list):
     for ip in anomalies:
         logging.info(ip)
 
-# Fungsi untuk analisis korelasi IP
 def ip_correlation_analysis():
     log_file_path = "forensic_logs.json"
     ip_list = []
@@ -162,12 +150,10 @@ def ip_correlation_analysis():
     if ip_list:
         detect_anomalies(ip_list)
 
-# Fungsi untuk memantau ancaman secara real-time
 def alert_monitoring():
     logging.info("[ALERT MONITORING] Active threat detection enabled.")
     logging.info("Real-time alerts will be generated for detected threats.")
 
-# Fungsi untuk memindai semua link pada halaman
 def scan_all_links(url):
     try:
         response = requests.get(url)
@@ -183,96 +169,20 @@ def scan_all_links(url):
     except Exception as e:
         logging.error("Error scanning all links: %s", e)
 
-# Fungsi analitik tren URL
-def analyze_url_trends():
+def update():
+    logging.info("Updating the forensic tool...")
     try:
-        log_file_path = "forensic_logs.json"
-        url_count = Counter()
-        
-        if os.path.exists(log_file_path):
-            with open(log_file_path, "r") as log_file:
-                logs = [json.loads(line) for line in log_file if line.strip()]
-                for log in logs:
-                    url = log.get("url", "")
-                    if url:
-                        url_count[url] += 1
-        
-        if url_count:
-            logging.info("--- URL Trends ---")
-            # Plotting
-            urls, counts = zip(*url_count.items())
-            plt.bar(urls, counts)
-            plt.xticks(rotation=45, ha='right')
-            plt.xlabel("URL")
-            plt.ylabel("Jumlah Scan")
-            plt.title("Tren URL Berdasarkan Jumlah Scan")
-            plt.tight_layout()
-            plt.show()
-        else:
-            logging.info("No URL scan history found for trend analysis.")
-    except Exception as e:
-        logging.error("Error analyzing URL trends: %s", e)
+        subprocess.run(["git", "pull"], check=True)
+        logging.info("Forensic tool updated successfully.")
+    except subprocess.CalledProcessError as e:
+        logging.error("Failed to update forensic tool: %s", e)
 
-# Fungsi analisis metadata
-def analyze_metadata(url):
-    try:
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        meta_data = [meta.get('name') for meta in soup.find_all('meta') if meta.get('name')]
-        if meta_data:
-            logging.info("--- Metadata Analysis ---")
-            meta_count = Counter(meta_data)
-            
-            # Plotting
-            labels, values = zip(*meta_count.items())
-            plt.bar(labels, values)
-            plt.xticks(rotation=45, ha='right')
-            plt.xlabel("Metadata Name")
-            plt.ylabel("Frequency")
-            plt.title("Analisis Metadata pada URL")
-            plt.tight_layout()
-            plt.show()
-        else:
-            logging.info("No metadata found for URL.")
-    except Exception as e:
-        logging.error("Error analyzing metadata: %s", e)
-
-# Fungsi untuk menghitung skor keamanan URL
-def calculate_security_score(url):
-    try:
-        score = 100  # Mulai dengan skor maksimal
-        
-        # Cek apakah URL masuk dalam blacklist
-        blacklist_urls = [
-            f"https://www.virustotal.com/gui/domain/{url}",
-            f"https://www.phishtank.com/check_another.php?quick=1&isaphish=&valid=Check+URL&url={url}"
-        ]
-        
-        for b_url in blacklist_urls:
-            logging.info(f"Checking blacklist status for: {b_url}")
-            score -= 20  # Mengurangi skor jika URL ada dalam blacklist
-
-        # Cek metadata (misal: apakah ada keyword mencurigakan)
-        if "phishing" in url.lower():
-            logging.info("URL contains suspicious keyword: phishing")
-            score -= 30
-        
-        # Cek apakah URL memiliki data sensitif (email, API keys)
-        if scan_sensitive_info(url):  # Memanggil fungsi scan_sensitive_info yang sudah ada
-            logging.info("Sensitive data detected on URL.")
-            score -= 40
-        
-        logging.info("Security Score for URL: %s is %d", url, score)
-    except Exception as e:
-        logging.error("Error calculating security score: %s", e)
-
-# Fitur utama yang sudah ada, ditambah analitik
 def main():
     if len(sys.argv) < 2:
-        logging.error("Usage: python3 forensic.py <URL> or python3 forensic.py -update")
+        logging.error("Usage: python3 forensic.py <URL> or python3 forensic.py --update")
         return
     
-    if sys.argv[1] == "-update":
+    if sys.argv[1] == "--update":  # Perbaikan untuk menangani '--update'
         update()
         return
     
